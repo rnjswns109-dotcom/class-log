@@ -181,6 +181,7 @@
         .section-title-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
         .collapsible-panel.is-collapsed .collapsible-body { display: none; }
         .panel-toggle-btn { margin: 0; padding: 7px 12px; border-radius: 999px; font-size: 0.86rem; }
+        .mobile-fold-toggle { display: none; }
         .control-row { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 14px; align-items: end; }
         .control-row.compact { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
         .form-group, .task-form-group { margin-bottom: 14px; }
@@ -1494,6 +1495,40 @@
                 background: var(--notification-info-bg);
                 color: var(--notification-info-text);
             }
+            .mobile-fold-toggle {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 34px;
+                margin: 0;
+                padding: 6px 10px;
+                border-radius: 999px;
+                font-size: 0.82rem;
+            }
+            .tab-content .section-card,
+            .student-log-panel,
+            .filter-section {
+                transition: border-color 0.2s ease, background-color 0.2s ease;
+            }
+            .mobile-fold-collapsed {
+                border-style: dashed !important;
+                background: var(--help-bg) !important;
+            }
+            #attendance-filter-section .section-title-row,
+            .student-detail-sidebar .section-title-row,
+            .student-detail-main > .section-title-row,
+            #student-log-panel > .section-title-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 8px;
+            }
+            #attendance-filter-section .section-title-row .panel-toggle-btn:not(.mobile-fold-toggle) {
+                justify-self: end;
+            }
+            .mobile-fold-collapsed > .section-title-row .panel-toggle-btn:not(.mobile-fold-toggle) {
+                display: none !important;
+            }
             .notification {
                 top: 10px;
                 right: 10px;
@@ -1955,7 +1990,7 @@
                         <button type="button" class="add" id="save-student-log-btn">누가기록 추가</button>
                         <button type="button" class="modify" id="cancel-student-log-edit-btn" style="display:none;">수정 취소</button>
                     </div>
-                    <div class="control-row compact" style="margin-top:12px;">
+                    <div class="control-row compact student-log-filter-bar" style="margin-top:12px;">
                         <div class="form-group"><label for="student-log-filter-start-date">시작 날짜</label><input type="date" id="student-log-filter-start-date"></div>
                         <div class="form-group"><label for="student-log-filter-end-date">끝 날짜</label><input type="date" id="student-log-filter-end-date"></div>
                         <div class="form-group"><label for="student-log-filter-type">유형 필터</label><select id="student-log-filter-type"><option value="">전체</option><option value="상담">상담</option><option value="보호자 연락">보호자 연락</option><option value="생활지도">생활지도</option><option value="학습">학습</option><option value="칭찬">칭찬</option><option value="기타">기타</option></select></div>
@@ -2742,7 +2777,8 @@
         cloudUser: null,
         cloudDb: null,
         cloudBusy: false,
-        cloudLastSavedAt: ''
+        cloudLastSavedAt: '',
+        mobileFoldCollapsed: {}
     };
 
     function $(id) { return document.getElementById(id); }
@@ -4437,6 +4473,8 @@
         if(getSelectedStudentLogName() && getSelectedStudentLogName()!==name) resetStudentLogForm();
         renderStudentLogPanel(name);
         switchTab('tab-student-logs');
+        collapseMobileFold('student-log-roster',true);
+        collapseMobileFold('student-log-filter',true);
     }
     function clearStudentLogPage() {
         const input=$('student-log-student-name');
@@ -4444,6 +4482,7 @@
         resetStudentLogForm();
         renderStudentLogPanel('');
         renderStudentLogRoster();
+        collapseMobileFold('student-log-roster',false);
     }
     function refreshStudentLogPageIfActive() {
         const tab=$('tab-student-logs');
@@ -4568,6 +4607,8 @@
         const input=$('student-detail-name');
         if(input) input.value=name;
         switchTab('tab-student-detail');
+        collapseMobileFold('student-detail-roster',true);
+        collapseMobileFold('student-detail-filter',true);
     }
     function clearStudentDetailPage() {
         const input=$('student-detail-name');
@@ -4586,6 +4627,7 @@
             body.appendChild(empty);
         }
         renderStudentDetailRoster();
+        collapseMobileFold('student-detail-roster',false);
     }
     function viewSelectedStudentDetail() {
         const name=normalizeStudentName($('student-detail-name')?.value || '');
@@ -7214,12 +7256,109 @@
         updateTodayDateDisplay();
         const filterInfo=$('filter-result-info');
         if(filterInfo) updateFilterResultInfo(getFilteredEntryItems());
+        updateMobileFolds();
+    }
+    function getMobileFoldConfigs() {
+        return [
+            {
+                id:'attendance-list',
+                host:'#attendance-filter-section .section-title-row',
+                container:'#attendance-filter-section',
+                closedText:'목록 열기',
+                openText:'목록 접기',
+                defaultCollapsed:true,
+                items:['#attendance-filter-section > fieldset','#attendance-filter-section > .collapsible-panel','#attendance-filter-section > #filter-result-info','#entry-list-toolbar','#entries-container','#summary-section']
+            },
+            {
+                id:'student-detail-roster',
+                host:'#tab-student-detail .student-detail-sidebar .section-title-row',
+                container:'#tab-student-detail .student-detail-sidebar',
+                closedText:'학생 찾기',
+                openText:'학생 목록 접기',
+                defaultCollapsed:false,
+                items:['#tab-student-detail .student-detail-sidebar > p','#tab-student-detail .student-roster-search-row','#student-detail-roster']
+            },
+            {
+                id:'student-detail-filter',
+                host:'#tab-student-detail .student-detail-main > .section-title-row',
+                container:'#tab-student-detail .student-detail-main',
+                closedText:'필터 열기',
+                openText:'필터 접기',
+                defaultCollapsed:true,
+                items:['#tab-student-detail .student-detail-filter-bar','#student-detail-filter-info']
+            },
+            {
+                id:'student-log-roster',
+                host:'#tab-student-logs .student-detail-sidebar .section-title-row',
+                container:'#tab-student-logs .student-detail-sidebar',
+                closedText:'학생 찾기',
+                openText:'학생 목록 접기',
+                defaultCollapsed:false,
+                items:['#tab-student-logs .student-detail-sidebar > p','#tab-student-logs .student-roster-search-row','#student-log-roster']
+            },
+            {
+                id:'student-log-filter',
+                host:'#student-log-panel > .section-title-row',
+                container:'#student-log-panel',
+                closedText:'필터 열기',
+                openText:'필터 접기',
+                defaultCollapsed:true,
+                items:['#student-log-panel .student-log-filter-bar']
+            }
+        ];
+    }
+    function getMobileFoldConfig(id) { return getMobileFoldConfigs().find(config=>config.id===id); }
+    function ensureMobileFoldButton(config) {
+        const host=document.querySelector(config.host);
+        if(!host) return null;
+        let button=host.querySelector(`.mobile-fold-toggle[data-mobile-fold="${config.id}"]`);
+        if(button) return button;
+        button=document.createElement('button');
+        button.type='button';
+        button.className='neutral mobile-fold-toggle';
+        button.dataset.mobileFold=config.id;
+        button.addEventListener('click',()=>setMobileFoldCollapsed(config.id,!Boolean(state.mobileFoldCollapsed[config.id])));
+        host.appendChild(button);
+        return button;
+    }
+    function applyMobileFold(config) {
+        const button=ensureMobileFoldButton(config);
+        if(state.mobileFoldCollapsed[config.id] === undefined) state.mobileFoldCollapsed[config.id]=Boolean(config.defaultCollapsed);
+        const collapsed=isMobileShell() && Boolean(state.mobileFoldCollapsed[config.id]);
+        config.items.forEach(selector=>{
+            document.querySelectorAll(selector).forEach(element=>{
+                element.style.display=collapsed ? 'none' : '';
+            });
+        });
+        const container=document.querySelector(config.container);
+        if(container) container.classList.toggle('mobile-fold-collapsed',collapsed);
+        if(button) {
+            button.textContent=collapsed ? config.closedText : config.openText;
+            button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+    }
+    function setupMobileFolds() {
+        getMobileFoldConfigs().forEach(config=>applyMobileFold(config));
+    }
+    function updateMobileFolds() {
+        getMobileFoldConfigs().forEach(config=>applyMobileFold(config));
+    }
+    function setMobileFoldCollapsed(id, collapsed) {
+        const config=getMobileFoldConfig(id);
+        if(!config) return;
+        state.mobileFoldCollapsed[id]=Boolean(collapsed);
+        applyMobileFold(config);
+    }
+    function collapseMobileFold(id, collapsed=true) {
+        if(!isMobileShell()) return;
+        setMobileFoldCollapsed(id,collapsed);
     }
     function setupMobileShell() {
         updateMobileShellLabels();
+        setupMobileFolds();
         if(!window.matchMedia) return;
         const query=window.matchMedia(MOBILE_SHELL_QUERY);
-        const handler=()=>updateMobileShellLabels();
+        const handler=()=>{ updateMobileShellLabels(); updateMobileFolds(); };
         if(query.addEventListener) query.addEventListener('change',handler);
         else if(query.addListener) query.addListener(handler);
     }
