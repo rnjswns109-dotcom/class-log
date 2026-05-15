@@ -1409,6 +1409,95 @@
             }
         }
 
+        @media (max-width: 760px) {
+            html { scroll-padding-bottom: 82px; }
+            body { background: var(--bg-color); }
+            .container {
+                padding: 10px 10px calc(82px + env(safe-area-inset-bottom, 0px));
+            }
+            .container > h1 { display: none; }
+            .top-bar {
+                position: sticky;
+                top: 0;
+                z-index: 1100;
+                margin: -10px -10px 10px;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--soft-border-color);
+                background: var(--bg-color);
+            }
+            .top-status-cluster {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 5px;
+            }
+            .top-status-cluster #cloud-sync-chip {
+                grid-column: auto;
+            }
+            .top-status-cluster .backup-status-chip {
+                min-height: 28px;
+                padding: 4px 6px;
+                font-size: 0.7rem;
+                line-height: 1.15;
+                overflow: hidden;
+            }
+            .top-backup-actions,
+            .top-actions {
+                gap: 6px;
+            }
+            .top-backup-actions button,
+            .top-actions button {
+                min-height: 38px;
+                padding: 7px 8px;
+                border-radius: 9px;
+                font-size: 0.84rem;
+            }
+            .tab-nav {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 2600;
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: 3px;
+                margin: 0;
+                padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+                border: 0;
+                border-top: 1px solid var(--soft-border-color);
+                background: var(--card-bg);
+                box-shadow: 0 -10px 28px rgba(0,0,0,0.16);
+                overflow: visible;
+            }
+            .tab-btn {
+                min-width: 0 !important;
+                width: 100%;
+                min-height: 48px;
+                margin: 0;
+                padding: 7px 2px;
+                border: 1px solid transparent;
+                border-radius: 10px;
+                border-bottom: 0;
+                font-size: 0.72rem;
+                line-height: 1.08;
+                white-space: normal;
+            }
+            .tab-btn.active {
+                border-color: rgba(25,118,210,0.28);
+                background: var(--notification-info-bg);
+                color: var(--notification-info-text);
+            }
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .tab-btn { font-size: 0.66rem; }
+            .top-status-cluster .backup-status-chip { font-size: 0.66rem; }
+        }
+
 
         /* Firebase Cloud 동기화 */
         .cloud-sync-panel { display: grid; gap: 10px; }
@@ -2648,6 +2737,8 @@
     };
 
     function $(id) { return document.getElementById(id); }
+    const MOBILE_SHELL_QUERY = '(max-width: 760px)';
+    function isMobileShell() { return window.matchMedia && window.matchMedia(MOBILE_SHELL_QUERY).matches; }
     function todaySeoul() { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }); }
     function updateTodayDateDisplay() {
         const el=$('today-date-chip');
@@ -2656,7 +2747,12 @@
         const date=new Date(`${today}T00:00:00`);
         const weekdays=['일','월','화','수','목','금','토'];
         const weekday=Number.isNaN(date.getTime()) ? '' : ` (${weekdays[date.getDay()]})`;
-        el.textContent=`오늘: ${today}${weekday}`;
+        if(isMobileShell()) {
+            const [,month,day]=today.split('-');
+            el.textContent=`${Number(month)}/${Number(day)}${weekday}`;
+        } else {
+            el.textContent=`오늘: ${today}${weekday}`;
+        }
     }
     function nowISO() { return new Date().toISOString(); }
     function safeString(v) { return String(v ?? ''); }
@@ -4536,7 +4632,7 @@
     function updateFilterResultInfo(items) {
         const mc=items.filter(({entry:e})=>isMissingDoc(e)).length;
         $('filter-result-info').textContent=`현재 필터 결과: ${items.length}건 / 서류 미제출 ${mc}건`;
-        if($('top-attendance-summary')) $('top-attendance-summary').textContent=`출결 요약: ${items.length}건 / 미제출 ${mc}건`;
+        if($('top-attendance-summary')) $('top-attendance-summary').textContent=isMobileShell() ? `출결 ${items.length} / 미제출 ${mc}` : `출결 요약: ${items.length}건 / 미제출 ${mc}건`;
         updateActiveFilterChip();
     }
     function updateActiveFilterChip() {
@@ -7070,7 +7166,7 @@
         const dialog=getActiveDialog();
         if(!dialog) return false;
         const id=dialog.id;
-        if(['confirm-modal','password-modal','bulk-preview-modal','merge-modal','app-lock-overlay'].includes(id)) return true;
+        if(['confirm-modal','password-modal','bulk-preview-modal','merge-modal','cloud-backup-modal','app-lock-overlay'].includes(id)) return true;
         if(id==='data-management-modal') closeDataManagementModal();
         else if(id==='attendance-date-modal') closeAttendanceDateModal();
         else if(id==='student-missing-modal') closeStudentMissingModal();
@@ -7088,6 +7184,35 @@
         if(tabId==='tab-attendance') renderQuickAttendance();
         if(tabId==='tab-student-detail') refreshStudentDetailIfActive();
         if(tabId==='tab-student-logs') refreshStudentLogPageIfActive();
+        if(isMobileShell()) window.scrollTo({top:0, behavior:'smooth'});
+    }
+    function updateMobileShellLabels() {
+        const mobile=isMobileShell();
+        const labels={
+            'tab-btn-attendance':'오늘',
+            'tab-btn-management':'관리',
+            'tab-btn-student-detail':'학생',
+            'tab-btn-student-logs':'상담',
+            'tab-btn-tasks':'업무',
+            'tab-btn-settings':'설정'
+        };
+        Object.entries(labels).forEach(([id,label])=>{
+            const el=$(id);
+            if(!el) return;
+            if(!el.dataset.fullLabel) el.dataset.fullLabel=el.textContent;
+            el.textContent=mobile ? label : el.dataset.fullLabel;
+        });
+        updateTodayDateDisplay();
+        const filterInfo=$('filter-result-info');
+        if(filterInfo) updateFilterResultInfo(getFilteredEntryItems());
+    }
+    function setupMobileShell() {
+        updateMobileShellLabels();
+        if(!window.matchMedia) return;
+        const query=window.matchMedia(MOBILE_SHELL_QUERY);
+        const handler=()=>updateMobileShellLabels();
+        if(query.addEventListener) query.addEventListener('change',handler);
+        else if(query.addListener) query.addListener(handler);
     }
     function toggleDarkMode() { document.body.classList.toggle('dark-mode'); try { localStorage.setItem('darkMode',document.body.classList.contains('dark-mode')?'true':'false'); } catch(e) {} updateDarkModeButton(); }
     function updateDarkModeButton() { $('toggle-dark-mode').textContent=document.body.classList.contains('dark-mode')?'라이트 모드':'다크 모드'; }
@@ -8549,6 +8674,7 @@ ${origin}`); }
         updateUndoButton(); renderEntries(); renderTasks(); updateAttCalendar(); updateLastSaveInfo();
         renderStudentRoster(); renderStudentLogRoster(); renderStudentLogPanel(''); renderCategorySettings(); updateNewCatUnexcused(); renderQuickAttendance(); updateManualEntryStatus();
         loadUiSettings();
+        setupMobileShell();
         initializeAppLock();
         updateStorageHealthDisplay(false);
         updateXlsxStatusDisplay();
