@@ -1813,8 +1813,10 @@
                 <span id="mobile-status-cloud">클라우드: 연결 안 됨</span>
             </div>
             <div class="mobile-command-actions">
-                <button type="button" class="save" id="mobile-quick-save-btn">변경분 저장</button>
-                <button type="button" class="save" id="mobile-backup-save-btn">백업 저장</button>
+                <button type="button" class="primary" id="mobile-cloud-login-btn">Cloud login</button>
+                <button type="button" class="neutral" id="mobile-cloud-logout-btn">Logout</button>
+                <button type="button" class="save" id="mobile-cloud-save-btn">Cloud 저장</button>
+                <button type="button" class="load" id="mobile-cloud-load-btn">Cloud 불러오기</button>
                 <button type="button" class="primary" id="mobile-data-management-btn">데이터 관리</button>
                 <button type="button" class="neutral" id="mobile-guide-btn">도움말</button>
             </div>
@@ -2532,7 +2534,8 @@
                         </div>
                         <span class="field-note">권장 위치: Google Drive for desktop 또는 OneDrive의 <strong>학급일지백업</strong> 폴더. 다른 PC에서는 이 폴더의 최신 백업 파일을 불러오면 됩니다.</span>
                     </div>
-                    <div class="data-subgroup full-width cloud-sync-panel">
+                    <details class="data-subgroup full-width" id="cloud-advanced-details">
+                        <summary>고급: Firebase Cloud 동기화</summary>
                         <div class="data-subgroup-title">Firebase Cloud 동기화</div>
                         <div class="cloud-sync-status info" id="drive-sync-status">Firebase: 연결 안 됨</div>
                         <div class="cloud-test-guide" aria-label="Firebase 동기화 안내">
@@ -2547,7 +2550,7 @@
                                 <button type="button" class="neutral" id="copy-current-origin-btn">현재 도메인 복사</button>
                                 <button type="button" class="neutral" id="open-client-id-details-btn">Firebase 설정 보기</button>
                             </div>
-                            <details class="cloud-test-steps" open>
+                            <details class="cloud-test-steps">
                                 <summary>사용 순서</summary>
                                 <ol class="guide-list">
                                     <li>Firebase Authentication에서 이메일/비밀번호 계정을 만듭니다.</li>
@@ -2580,7 +2583,7 @@
                                 <span class="field-note" id="drive-file-info">Firebase: 아직 로그인되지 않음</span>
                             </div>
                         </div>
-                        <details class="data-subgroup full-width" id="drive-client-id-details" open>
+                        <details class="data-subgroup full-width" id="drive-client-id-details">
                             <summary>개발자 설정: Firebase</summary>
                             <div class="cloud-client-id-row">
                                 <div class="form-group">
@@ -2591,7 +2594,7 @@
                                 <button type="button" class="primary" id="save-drive-client-id-btn">상태 새로고침</button>
                             </div>
                         </details>
-                    </div>
+                    </details>
                     <div class="data-action-tier primary-tier">
                         <div class="data-action-tier-title">자주 쓰는 작업</div>
                         <ol class="guide-list">
@@ -2837,6 +2840,7 @@
     const ATTENDANCE_STORAGE_KEY = 'attendance_v3';
     const ATTENDANCE_AUTOSAVE_KEY = 'attendanceAutoSaveEnabled_v3';
     const ATTENDANCE_SAVED_AT_KEY = 'attendanceSavedAt_v3';
+    const APP_MODE_AUTOSAVE_NOTICE = '앱 모드에서는 보안을 위해 브라우저 자동 저장을 사용할 수 없습니다. Cloud 저장/불러오기를 사용하세요.';
     const ATTENDANCE_DELETED_HISTORY_KEY = 'attendanceDeletedHistory_v4';
     const CATEGORIES_STORAGE_KEY = 'categoriesSettings_v3';
     const CATEGORY_STRUCTURE_VERSION_KEY = 'categoryStructureVersion_v4';
@@ -2914,6 +2918,47 @@
     function $(id) { return document.getElementById(id); }
     const MOBILE_SHELL_QUERY = '(max-width: 760px)';
     function isMobileShell() { return window.matchMedia && window.matchMedia(MOBILE_SHELL_QUERY).matches; }
+    function isAppModeRuntime() {
+        return Boolean(
+            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+            (window.navigator && window.navigator.standalone === true) ||
+            (document.referrer && document.referrer.startsWith('android-app://'))
+        );
+    }
+    function enforceAppModeAutoSavePolicy(opts={}) {
+        const appMode=isAppModeRuntime();
+        const attendanceCheckbox=$('use-localstorage-attendance');
+        const taskCheckbox=$('use-localstorage-tasks');
+        if(!appMode) {
+            if(attendanceCheckbox) {
+                attendanceCheckbox.disabled=false;
+                attendanceCheckbox.title='';
+            }
+            if(taskCheckbox) {
+                taskCheckbox.disabled=false;
+                taskCheckbox.title='';
+            }
+            return false;
+        }
+        state.attendanceAutoSaveEnabled=false;
+        state.taskAutoSaveEnabled=false;
+        try {
+            localStorage.setItem(ATTENDANCE_AUTOSAVE_KEY,'false');
+            localStorage.setItem(TASKS_AUTOSAVE_KEY,'false');
+        } catch(e) {}
+        if(attendanceCheckbox) {
+            attendanceCheckbox.checked=false;
+            attendanceCheckbox.disabled=true;
+            attendanceCheckbox.title=APP_MODE_AUTOSAVE_NOTICE;
+        }
+        if(taskCheckbox) {
+            taskCheckbox.checked=false;
+            taskCheckbox.disabled=true;
+            taskCheckbox.title=APP_MODE_AUTOSAVE_NOTICE;
+        }
+        if(opts.notify) showNotification(APP_MODE_AUTOSAVE_NOTICE,'info');
+        return true;
+    }
     function todaySeoul() { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }); }
     function updateTodayDateDisplay() {
         const el=$('today-date-chip');
@@ -5963,6 +6008,7 @@
         catch(e) { state.tasks=[]; showNotification('브라우저 저장 업무 데이터를 읽지 못했습니다.','error'); }
     }
     async function handleTaskAutoSaveToggle() {
+        if(enforceAppModeAutoSavePolicy({notify:true})) return;
         const checkbox=$('use-localstorage-tasks');
         state.taskAutoSaveEnabled=checkbox.checked;
         persistTaskAutoSavePreference();
@@ -7756,6 +7802,7 @@
         catch(e) { state.entries=[]; showNotification('브라우저 저장 출결 데이터를 읽지 못했습니다.','error'); }
     }
     async function handleAttendanceAutoSaveToggle() {
+        if(enforceAppModeAutoSavePolicy({notify:true})) return;
         const cb=$('use-localstorage-attendance');
         state.attendanceAutoSaveEnabled=cb.checked;
         persistAttendanceAutoSavePref();
@@ -8357,8 +8404,8 @@
         if(status) { status.className=`cloud-sync-status ${cls}`; status.textContent=text; }
         if(chip) { chip.className=`backup-status-chip storage-health-chip ${cls}`; chip.textContent=chipText; }
         if(fileInfo) fileInfo.textContent = hasFile ? `Drive 파일: ${GOOGLE_DRIVE_FILE_NAME} / ID ${state.driveFileId.slice(0,10)}... / 수정 ${formatDriveTime(state.driveFileModifiedTime)}` : 'Drive 파일: 아직 연결되지 않음';
-        ['drive-open-file-btn','drive-save-btn','drive-load-btn','drive-disconnect-btn','top-cloud-save-btn','top-cloud-load-btn'].forEach(id=>{ const btn=$(id); if(btn) btn.disabled=!connected || state.driveBusy; });
-        ['google-connect-btn','top-google-connect-btn'].forEach(id=>{ const btn=$(id); if(btn) { btn.disabled=state.driveBusy || !runtimeOk || !configured; btn.textContent=connected?'Google 재연결':'Google 연결'; } });
+        ['drive-open-file-btn','drive-save-btn','drive-load-btn','drive-disconnect-btn','top-cloud-save-btn','top-cloud-load-btn','mobile-cloud-save-btn','mobile-cloud-load-btn','mobile-cloud-logout-btn'].forEach(id=>{ const btn=$(id); if(btn) btn.disabled=!connected || state.driveBusy; });
+        ['google-connect-btn','top-google-connect-btn','mobile-cloud-login-btn'].forEach(id=>{ const btn=$(id); if(btn) { btn.disabled=state.driveBusy || !runtimeOk || !configured; btn.textContent=connected?'Google 재연결':'Google 연결'; } });
         const input=$('drive-client-id-input'); if(input && !input.value) input.value=getConfiguredDriveClientId().includes('PASTE_GOOGLE_CLIENT_ID_HERE')?'':getConfiguredDriveClientId();
         updateDrivePersonalTestDisplay();
     }
@@ -8613,8 +8660,8 @@
         if(status) { status.className=`cloud-sync-status ${cls}`; status.textContent=text; }
         if(chip) { chip.className=`backup-status-chip storage-health-chip ${cls}`; chip.textContent=chipText; }
         if(fileInfo) fileInfo.textContent=connected ? `Firebase 계정: ${state.cloudUser.email || state.cloudUser.uid}` : 'Firebase: 아직 로그인되지 않음';
-        ['drive-save-btn','drive-load-btn','drive-disconnect-btn','top-cloud-save-btn','top-cloud-load-btn'].forEach(id=>{ const btn=$(id); if(btn) btn.disabled=!connected || state.cloudBusy; });
-        ['google-connect-btn','top-google-connect-btn'].forEach(id=>{ const btn=$(id); if(btn) { btn.disabled=state.cloudBusy || !state.cloudReady; btn.textContent=connected?'Cloud 로그인됨':'Cloud login'; } });
+        ['drive-save-btn','drive-load-btn','drive-disconnect-btn','top-cloud-save-btn','top-cloud-load-btn','mobile-cloud-save-btn','mobile-cloud-load-btn','mobile-cloud-logout-btn'].forEach(id=>{ const btn=$(id); if(btn) btn.disabled=!connected || state.cloudBusy; });
+        ['google-connect-btn','top-google-connect-btn','mobile-cloud-login-btn'].forEach(id=>{ const btn=$(id); if(btn) { btn.disabled=state.cloudBusy || !state.cloudReady; btn.textContent=connected?'Cloud 로그인됨':'Cloud login'; } });
         const topLogin=$('top-google-connect-btn');
         if(topLogin) topLogin.hidden=connected;
         const input=$('drive-client-id-input'); if(input) input.value=CLOUD_CONFIG.projectId;
@@ -8858,8 +8905,10 @@
         });
         document.querySelectorAll('.tab-btn').forEach(b=>{ b.addEventListener('click',()=>switchTab(b.dataset.tab)); b.addEventListener('keydown',handleTabKeydown); });
         $('mobile-command-toggle')?.addEventListener('click',()=>toggleMobileCommandMenu());
-        $('mobile-quick-save-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); $('quick-save-all-btn')?.click(); });
-        $('mobile-backup-save-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); $('top-save-btn')?.click(); });
+        $('mobile-cloud-save-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); saveJournalToDrive(); });
+        $('mobile-cloud-load-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); loadJournalFromDrive(); });
+        $('mobile-cloud-login-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); connectGoogleDrive(); });
+        $('mobile-cloud-logout-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); disconnectGoogleDrive(); });
         $('mobile-data-management-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); openDataManagementModal(); });
         $('mobile-guide-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); openGuideHubModal(); });
         document.querySelectorAll('[data-mobile-tab]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -9050,8 +9099,11 @@ ${origin}`); }
         $('date').value=todaySeoul(); $('quick-date').value=todaySeoul(); setQuickConfirmedDate(todaySeoul()); $('quick-show-unentered-only').dataset.confirmedChecked=$('quick-show-unentered-only').checked?'true':'false'; $('task-date').value=todaySeoul();
         if($('student-log-date')) $('student-log-date').value=todaySeoul();
         updateDocumentFieldVisibility();
-        readAttendanceAutoSavePreference(); loadAttendanceFromLocalStorage();
-        readTaskAutoSavePreference(); loadTasksFromLocalStorage();
+        readAttendanceAutoSavePreference();
+        readTaskAutoSavePreference();
+        enforceAppModeAutoSavePolicy();
+        loadAttendanceFromLocalStorage();
+        loadTasksFromLocalStorage();
         readDirtyFlags();
         updateTodayDateDisplay();
         updateUndoButton(); renderEntries(); renderTasks(); updateAttCalendar(); updateLastSaveInfo();
