@@ -182,6 +182,7 @@
         .collapsible-panel.is-collapsed .collapsible-body { display: none; }
         .panel-toggle-btn { margin: 0; padding: 7px 12px; border-radius: 999px; font-size: 0.86rem; }
         .mobile-fold-toggle { display: none; }
+        .mobile-command-shell { display: none; }
         .control-row { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 14px; align-items: end; }
         .control-row.compact { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
         .form-group, .task-form-group { margin-bottom: 14px; }
@@ -721,6 +722,9 @@
         .quick-status.no-entry { color: var(--muted-text); }
         .quick-action-wrap { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
         .quick-action-wrap button { margin: 0; padding: 6px 10px; font-size: 0.84rem; border-radius: 999px; }
+        .quick-expand-btn { display: none; }
+        .quick-lookup-actions { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px; }
+        .quick-lookup-actions button { margin: 0; padding: 5px 9px; font-size: 0.8rem; border-radius: 999px; }
         .quick-reset-btn { background: var(--button-neutral-bg); }
         .quick-pending-info.has-pending { background: var(--calendar-due-bg); color: var(--warning-color); border-color: var(--warning-color); }
         .empty-action-cell { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 10px 4px; }
@@ -878,7 +882,7 @@
             }
             #quick-attendance-table td[data-label="학생"] {
                 display: block;
-                padding: 0 88px 9px 0;
+                padding: 0 88px 10px 0;
                 border-bottom: 1px solid var(--soft-border-color);
                 margin-bottom: 8px;
             }
@@ -919,6 +923,24 @@
             }
             .quick-status.saved { background: var(--notification-success-bg); color: var(--notification-success-text); }
             .quick-status.dirty { background: var(--calendar-due-bg); color: var(--warning-color); border-color: rgba(239,108,0,0.35); }
+            .quick-expand-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 34px;
+                margin: 8px 0 0;
+                padding: 0 12px;
+                border-radius: 8px;
+                font-size: 0.84rem;
+            }
+            #quick-attendance-table tbody tr.quick-row-mobile-collapsed td[data-label="출결 선택"],
+            #quick-attendance-table tbody tr.quick-row-mobile-collapsed td[data-label="처리"],
+            #quick-attendance-table tbody tr.quick-row-mobile-collapsed .quick-lookup-actions {
+                display: none;
+            }
+            #quick-attendance-table tbody tr.quick-row-mobile-collapsed {
+                padding-bottom: 10px;
+            }
             #quick-attendance-table .custom-select-ui,
             #quick-attendance-table select,
             #quick-attendance-table input[type="text"] {
@@ -951,11 +973,23 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 8px;
             }
+            .quick-lookup-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px;
+                margin-top: 8px;
+            }
             .quick-action-wrap button {
                 width: 100%;
                 min-height: 40px;
                 border-radius: 9px;
                 font-size: 0.9rem;
+            }
+            .quick-lookup-actions button {
+                width: 100%;
+                min-height: 34px;
+                border-radius: 8px;
+                font-size: 0.82rem;
             }
             .active-filter-chip { align-items: flex-start; border-radius: 9px; }
         }
@@ -1423,20 +1457,14 @@
         }
 
         @media (max-width: 760px) {
-            html { scroll-padding-bottom: 82px; }
+            html { scroll-padding-top: 56px; }
             body { background: var(--bg-color); }
             .container {
-                padding: 10px 10px calc(82px + env(safe-area-inset-bottom, 0px));
+                padding: 10px 10px calc(18px + env(safe-area-inset-bottom, 0px));
             }
             .container > h1 { display: none; }
             .top-bar {
-                position: sticky;
-                top: 0;
-                z-index: 1100;
-                margin: -10px -10px 10px;
-                padding: 8px 10px;
-                border-bottom: 1px solid var(--soft-border-color);
-                background: var(--bg-color);
+                display: none;
             }
             .top-status-cluster {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1473,21 +1501,7 @@
                 font-size: 0.84rem;
             }
             .tab-nav {
-                position: fixed;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 2600;
-                display: grid;
-                grid-template-columns: repeat(6, minmax(0, 1fr));
-                gap: 3px;
-                margin: 0;
-                padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
-                border: 0;
-                border-top: 1px solid var(--soft-border-color);
-                background: var(--card-bg);
-                box-shadow: 0 -10px 28px rgba(0,0,0,0.16);
-                overflow: visible;
+                display: none !important;
             }
             .tab-btn {
                 min-width: 0 !important;
@@ -1506,6 +1520,80 @@
                 border-color: rgba(25,118,210,0.28);
                 background: var(--notification-info-bg);
                 color: var(--notification-info-text);
+            }
+            .mobile-command-shell {
+                position: fixed;
+                top: calc(8px + env(safe-area-inset-top, 0px));
+                right: 8px;
+                z-index: 2700;
+                display: block;
+                pointer-events: none;
+            }
+            .mobile-command-shell.mobile-command-corner { width: auto; }
+            .mobile-command-panel {
+                display: none;
+                width: min(92vw, 360px);
+                max-height: min(72vh, 560px);
+                overflow: auto;
+                padding: 12px;
+                border: 1px solid var(--soft-border-color);
+                border-radius: 14px;
+                background: var(--card-bg);
+                box-shadow: 0 16px 44px rgba(0,0,0,0.24);
+                pointer-events: auto;
+                transform-origin: top right;
+            }
+            .mobile-command-shell.is-open .mobile-command-panel { display: grid; gap: 12px; }
+            .mobile-command-toggle {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 42px;
+                min-width: 42px;
+                height: 42px;
+                min-height: 42px;
+                margin: 0;
+                padding: 0;
+                border-radius: 12px;
+                background: var(--button-save-bg);
+                color: #fff;
+                border-color: var(--button-save-bg);
+                box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+                pointer-events: auto;
+                font-size: 1.25rem;
+                line-height: 1;
+            }
+            .mobile-command-shell.is-open .mobile-command-toggle { top: calc(100% + 8px); }
+            .mobile-command-status {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px;
+            }
+            .mobile-command-status span {
+                min-height: 30px;
+                padding: 6px 8px;
+                border: 1px solid var(--soft-border-color);
+                border-radius: 8px;
+                background: var(--help-bg);
+                color: var(--text-color);
+                font-size: 0.78rem;
+                font-weight: 800;
+                line-height: 1.25;
+            }
+            .mobile-command-actions,
+            .mobile-command-tabs {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            .mobile-command-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .mobile-command-actions button,
+            .mobile-command-tabs button {
+                width: 100%;
+                min-height: 42px;
+                margin: 0;
+                border-radius: 9px;
+                font-size: 0.86rem;
             }
             .mobile-fold-toggle {
                 display: inline-flex;
@@ -1714,6 +1802,32 @@
         <button type="button" class="tab-btn" data-tab="tab-student-logs" role="tab" aria-selected="false" id="tab-btn-student-logs" aria-controls="tab-student-logs">📝 상담/누가기록</button>
         <button type="button" class="tab-btn" data-tab="tab-tasks" role="tab" aria-selected="false" id="tab-btn-tasks" aria-controls="tab-tasks">📌 업무/공지</button>
         <button type="button" class="tab-btn" data-tab="tab-settings" role="tab" aria-selected="false" id="tab-btn-settings" aria-controls="tab-settings">⚙️ 설정</button>
+    </div>
+
+    <div class="mobile-command-shell mobile-command-corner" id="mobile-command-shell">
+        <div class="mobile-command-panel" id="mobile-command-panel" role="dialog" aria-modal="false" aria-label="모바일 작업 메뉴">
+            <div class="mobile-command-status">
+                <span id="mobile-status-date">오늘: 확인 중</span>
+                <span id="mobile-status-summary">출결 요약: 0건 / 미제출 0건</span>
+                <span id="mobile-status-pending">변경 대기 없음</span>
+                <span id="mobile-status-cloud">클라우드: 연결 안 됨</span>
+            </div>
+            <div class="mobile-command-actions">
+                <button type="button" class="save" id="mobile-quick-save-btn">변경분 저장</button>
+                <button type="button" class="save" id="mobile-backup-save-btn">백업 저장</button>
+                <button type="button" class="primary" id="mobile-data-management-btn">데이터 관리</button>
+                <button type="button" class="neutral" id="mobile-guide-btn">도움말</button>
+            </div>
+            <div class="mobile-command-tabs">
+                <button type="button" class="neutral" data-mobile-tab="tab-attendance">오늘</button>
+                <button type="button" class="neutral" data-mobile-tab="tab-management">관리</button>
+                <button type="button" class="neutral" data-mobile-tab="tab-student-detail">학생</button>
+                <button type="button" class="neutral" data-mobile-tab="tab-student-logs">상담</button>
+                <button type="button" class="neutral" data-mobile-tab="tab-tasks">업무</button>
+                <button type="button" class="neutral" data-mobile-tab="tab-settings">설정</button>
+            </div>
+        </div>
+        <button type="button" class="mobile-command-toggle" id="mobile-command-toggle" aria-label="모바일 작업 메뉴 열기" aria-expanded="false" aria-controls="mobile-command-panel">☰</button>
     </div>
 
     <!-- ========== 오늘 출결 입력 탭 ========== -->
@@ -5283,6 +5397,7 @@
         info.textContent=count ? `변경 대기 ${count}명` : '변경 대기 없음';
         info.classList.toggle('has-pending', count>0);
         updateSetupReadinessDisplay();
+        syncMobileCommandMenu();
     }
     function getQuickPendingCount() {
         return document.querySelectorAll('#quick-attendance-body tr.quick-row-dirty').length;
@@ -5355,13 +5470,32 @@
         if(!row) return;
         if(row.dataset.specialRecord==='true') {
             row.classList.remove('quick-row-collapsed');
+            row.classList.remove('quick-row-mobile-collapsed');
             return;
         }
         const kind=row.querySelector('.quick-kind-select')?.value || '';
         const expanded=row.dataset.hasExisting==='true' || Boolean(kind);
         row.classList.toggle('quick-row-collapsed', !expanded);
+        row.classList.toggle('quick-row-mobile-collapsed', row.dataset.mobileExpanded!=='true');
         const hint=row.querySelector('.quick-row-hint');
         if(hint) hint.textContent=expanded ? '사유·서류·상세를 확인하세요.' : '구분을 선택하면 세부 입력이 열립니다.';
+    }
+    function toggleQuickMobileRow(row, forceOpen=null) {
+        if(!row || row.dataset.specialRecord==='true') return;
+        const open=forceOpen===null ? row.dataset.mobileExpanded!=='true' : Boolean(forceOpen);
+        document.querySelectorAll('#quick-attendance-body tr[data-student]').forEach(other=>{
+            if(other!==row) {
+                other.dataset.mobileExpanded='false';
+                other.classList.add('quick-row-mobile-collapsed');
+                const otherBtn=other.querySelector('.quick-expand-btn');
+                if(otherBtn) otherBtn.textContent='입력';
+            }
+        });
+        row.dataset.mobileExpanded=open ? 'true' : 'false';
+        row.classList.toggle('quick-row-mobile-collapsed', !open);
+        const btn=row.querySelector('.quick-expand-btn');
+        if(btn) btn.textContent=open ? '접기' : '입력';
+        if(open) row.querySelector('.quick-kind-select')?.focus();
     }
     function refreshQuickRowState(row) {
         updateQuickRowExpansion(row);
@@ -5450,7 +5584,7 @@
             : students;
         if(countEl) countEl.textContent=`명단 ${students.length}명`;
         if(info) info.textContent=students.length
-            ? `${date} 기준 입력된 기록 ${savedCount}명 / 특이사항 없음 ${students.length-savedCount}명${showUnenteredOnly ? ` · 특이사항 없음 ${displayStudents.length}명만 표시 중` : ''}`
+            ? `${date} 기준 입력된 기록 ${savedCount}명 / 특이사항 없음 ${students.length-savedCount}명${showUnenteredOnly ? ` · 특이사항 없음 ${displayStudents.length}명만 표시 중` : ''} · 스마트폰에서는 한 학생만 펼쳐서 입력합니다.`
             : '설정 탭에서 학생 명단을 등록하세요.';
         if(!students.length) {
             appendEmptyActionRow(tbody,4,'설정 탭에서 학생 명단을 등록하세요.','학생 명단 등록하기',openStudentRosterSettings);
@@ -5473,7 +5607,21 @@
             tr.dataset.student=student;
             tr.dataset.hasExisting=existing ? 'true' : 'false';
             tr.dataset.specialRecord=specialExisting ? 'true' : 'false';
-            tr.appendChild(labelCell(createStudentCell(student),'학생'));
+            tr.dataset.mobileExpanded='false';
+            const studentCell=labelCell(createStudentCell(student),'학생');
+            const expandBtn=createButton('입력','primary',()=>toggleQuickMobileRow(tr));
+            expandBtn.className='primary quick-expand-btn';
+            studentCell.appendChild(expandBtn);
+            const lookupActions=document.createElement('div');
+            lookupActions.className='quick-lookup-actions';
+            const detailBtn=createButton('출결 보기','neutral',()=>openStudentDetail(student));
+            detailBtn.dataset.action='quick-detail';
+            lookupActions.appendChild(detailBtn);
+            const logBtn=createButton('누가기록','neutral',()=>openStudentLogPage(student));
+            logBtn.dataset.action='quick-log';
+            lookupActions.appendChild(logBtn);
+            studentCell.appendChild(lookupActions);
+            tr.appendChild(studentCell);
 
             const parsed=parseAttendanceCategory(existing?.category || '');
             const attendanceCell=document.createElement('td');
@@ -7231,6 +7379,33 @@
         setAttendanceTypeControls(current);
         refreshQuickAttendanceIfActive();
     }
+    function syncMobileCommandMenu() {
+        const map=[
+            ['mobile-status-date','today-date-chip'],
+            ['mobile-status-summary','top-attendance-summary'],
+            ['mobile-status-pending','quick-pending-info'],
+            ['mobile-status-cloud','cloud-sync-chip']
+        ];
+        map.forEach(([targetId, sourceId])=>{
+            const target=$(targetId), source=$(sourceId);
+            if(target && source) target.textContent=source.textContent;
+        });
+        document.querySelectorAll('[data-mobile-tab]').forEach(btn=>{
+            const isActive=Boolean($(btn.dataset.mobileTab)?.classList.contains('active'));
+            btn.classList.toggle('primary', isActive);
+            btn.classList.toggle('neutral', !isActive);
+        });
+    }
+    function toggleMobileCommandMenu(forceOpen=null) {
+        const shell=$('mobile-command-shell'), toggle=$('mobile-command-toggle');
+        if(!shell || !toggle) return;
+        const open=forceOpen===null ? !shell.classList.contains('is-open') : Boolean(forceOpen);
+        shell.classList.toggle('is-open',open);
+        toggle.setAttribute('aria-expanded',open?'true':'false');
+        toggle.textContent=open?'×':'☰';
+        toggle.setAttribute('aria-label',open?'모바일 작업 메뉴 닫기':'모바일 작업 메뉴 열기');
+        if(open) syncMobileCommandMenu();
+    }
 
     function handleTabKeydown(event) {
         const keys=['ArrowRight','ArrowLeft','Home','End']; if(!keys.includes(event.key)) return;
@@ -7284,6 +7459,7 @@
         if(tabId==='tab-attendance') renderQuickAttendance();
         if(tabId==='tab-student-detail') refreshStudentDetailIfActive();
         if(tabId==='tab-student-logs') refreshStudentLogPageIfActive();
+        syncMobileCommandMenu();
         if(isMobileShell()) window.scrollTo({top:0, behavior:'smooth'});
     }
     function updateMobileShellLabels() {
@@ -8671,6 +8847,7 @@
             trapFocusInActiveDialog(event);
             if(event.key === 'Escape') {
                 if(closeTopLevelDialog()) return;
+                toggleMobileCommandMenu(false);
                 closeOpenActionMenus();
             }
         });
@@ -8680,6 +8857,15 @@
             event.returnValue='';
         });
         document.querySelectorAll('.tab-btn').forEach(b=>{ b.addEventListener('click',()=>switchTab(b.dataset.tab)); b.addEventListener('keydown',handleTabKeydown); });
+        $('mobile-command-toggle')?.addEventListener('click',()=>toggleMobileCommandMenu());
+        $('mobile-quick-save-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); $('quick-save-all-btn')?.click(); });
+        $('mobile-backup-save-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); $('top-save-btn')?.click(); });
+        $('mobile-data-management-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); openDataManagementModal(); });
+        $('mobile-guide-btn')?.addEventListener('click',()=>{ toggleMobileCommandMenu(false); openGuideHubModal(); });
+        document.querySelectorAll('[data-mobile-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+            toggleMobileCommandMenu(false);
+            switchTab(btn.dataset.mobileTab);
+        }));
         $('open-data-management').addEventListener('click',openDataManagementModal);
         $('close-data-management').addEventListener('click',closeDataManagementModal);
         $('data-management-modal').addEventListener('click',e=>{ if(e.target===$('data-management-modal')) closeDataManagementModal(); });
